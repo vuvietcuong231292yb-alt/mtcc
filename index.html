@@ -128,7 +128,7 @@ var BASE=location.pathname.replace(/[^\/]*$/,'');
 var PUSH={os:null,dangTai:false,loi:'',coSub:false,thu:0};
 /** Hỏi thẳng trình duyệt: máy đã có đăng ký nhận thông báo chưa (không phụ thuộc OneSignal tải nhanh hay chậm) */
 function kiemSub(){var xong=function(c){var doi=c!==PUSH.coSub||!PUSH.daKiem;PUSH.coSub=c;PUSH.daKiem=true;if(c)LS.set('mtcc_pushok','1');else LS.del('mtcc_pushok');if(doi)veLaiPush()};
-  try{if(!('serviceWorker' in navigator)||!('Notification' in window)||Notification.permission!=='granted')return xong(false);navigator.serviceWorker.getRegistration(BASE).then(function(r){return r&&r.pushManager?r.pushManager.getSubscription():null}).then(function(x){xong(!!x)}).catch(function(){xong(false)})}catch(e){xong(false)}}
+  try{if(!('serviceWorker' in navigator)||!('Notification' in window)||Notification.permission!=='granted')return xong(false);navigator.serviceWorker.getRegistrations().then(function(ds){return Promise.all((ds||[]).map(function(r){return r.pushManager?r.pushManager.getSubscription().catch(function(){return null}):null}))}).then(function(x){xong(x.some(Boolean))}).catch(function(){xong(false)})}catch(e){xong(false)}}
 setTimeout(kiemSub,0);
 function laIOS(){return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function laApp(){return navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)}
@@ -140,14 +140,15 @@ function khoiTaoPush(appId,maNguoi){
   OneSignalDeferred.push(function(OS){
     return OS.init({appId:appId,serviceWorkerPath:BASE.slice(1)+'sw.js',serviceWorkerParam:{scope:BASE},allowLocalhostAsSecureOrigin:true,autoResubscribe:true})
     .then(function(){PUSH.os=OS;try{OS.User.PushSubscription.addEventListener('change',veLaiPush);OS.Notifications.addEventListener('permissionChange',veLaiPush)}catch(e){}return OS.login(maNguoi)})
-    .then(function(){PUSH.loi='';veLaiPush();kiemSub()}).catch(function(e){PUSH.loi=String(e&&e.message||e);kiemSub();veLaiPush();
+    .then(function(){PUSH.loi='';PUSH.osXong=true;veLaiPush();kiemSub()}).catch(function(e){PUSH.loi=String(e&&e.message||e);kiemSub();veLaiPush();
       if(PUSH.os&&PUSH.thu<3){PUSH.thu++;setTimeout(function(){PUSH.os.login(maNguoi).then(function(){PUSH.loi='';veLaiPush()}).catch(function(){})},5000*PUSH.thu)}}); // mạng chậm → tự thử lại
   });
 }
 function ttPush(){
   var os=PUSH.os,t={coAppId:!!(S.d&&S.d.push&&S.d.push.appId),ios:laIOS(),app:laApp(),hoTro:'Notification' in window&&'serviceWorker' in navigator,quyen:('Notification' in window)?Notification.permission:'default',bat:false};
-  try{if(os){t.bat=!!os.User.PushSubscription.optedIn&&t.quyen==='granted'}}catch(e){}
-  if(!t.bat&&t.quyen==='granted'&&(PUSH.coSub||!PUSH.daKiem&&LS.get('mtcc_pushok')))t.bat=true;
+  var osBat=false;try{if(os)osBat=!!os.User.PushSubscription.optedIn}catch(e){}
+  // v5h: máy đã CHO PHÉP thông báo → coi là đã bật ngay; chỉ báo "chưa bật" khi OneSignal tải xong mà xác nhận chưa đăng ký
+  t.bat=t.quyen==='granted'&&(osBat||PUSH.coSub||!PUSH.osXong);
   return t;
 }
 function veLaiPush(){var e=$('pushBox');if(e)e.innerHTML=htmlPush();var b=$('pushBanner');if(b)b.outerHTML=bannerPush()}
@@ -795,7 +796,7 @@ function htmlPush(){
 }
 function bannerPush(){
   var t=ttPush();
-  if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat||!PUSH.daKiem&&!PUSH.os)return '<div id="pushBanner"></div>'; // chưa kiểm tra xong thì chưa nhắc → không nháy khung vàng
+  if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat)return '<div id="pushBanner"></div>'; // chưa kiểm tra xong thì chưa nhắc → không nháy khung vàng
   return '<div id="pushBanner" class="card" style="border-color:var(--amb);background:var(--amb2)"><div class="row sp"><span>🔔 <b>Chưa bật thông báo</b> – sẽ không nhận được nhắc việc</span><button class="btn ok sm" data-a="moPush">Bật ngay</button></div></div>';
 }
 /* ---------- Kênh nhận thông báo: OneSignal / ntfy / cả hai ---------- */
