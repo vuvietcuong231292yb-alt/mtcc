@@ -729,11 +729,32 @@ function htmlPush(){
 }
 function bannerPush(){
   var t=ttPush();
-  if(!t.coAppId||t.bat||!S.d)return '<div id="pushBanner"></div>';
+  if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat)return '<div id="pushBanner"></div>';
   return '<div id="pushBanner" class="card" style="border-color:var(--amb);background:var(--amb2)"><div class="row sp"><span>🔔 <b>Chưa bật thông báo</b> – sẽ không nhận được nhắc việc</span><button class="btn ok sm" data-a="moPush">Bật ngay</button></div></div>';
 }
+/* ---------- Kênh nhận thông báo: OneSignal / ntfy / cả hai ---------- */
+var KENH=[['ONESIGNAL','OneSignal (qua app MTCC – hợp iPhone)'],['NTFY','App ntfy (hợp Android/Vivo, ổn định hơn)'],['CA_HAI','Cả hai (nhận 2 lần, chắc chắn nhất)']];
+function htmlNtfy(topic){
+  var sv=(S.d.cfg.ntfyServer||'https://ntfy.sh'),host=sv.replace(/^https?:\/\//,'');
+  return '<div class="box"><b>📲 Cài app ntfy</b><ol style="padding-left:20px;margin:6px 0;font-size:14px">'+
+    '<li>Mở <b>CH Play</b>, tìm <b>ntfy</b> (biểu tượng chuông) → <b>Cài đặt</b>. iPhone: App Store.</li>'+
+    '<li>Mở app ntfy → khi hỏi thông báo chọn <b>Cho phép</b>.</li>'+
+    '<li>Bấm nút <b>+</b> → ô <b>Topic name</b> dán mã bên dưới'+(host!=='ntfy.sh'?' – bật "Use another server", nhập <b>'+esc(sv)+'</b>':'')+'.</li>'+
+    '<li>Android: bật <b>Instant delivery</b> (Nhận tức thì) → bấm <b>Subscribe</b>. Nếu app hỏi bỏ tối ưu pin → <b>Cho phép</b>.</li>'+
+    '<li>Vivo: <b>Cài đặt › Pin › Mức tiêu thụ điện năng cao trong nền</b> → bật cho <b>ntfy</b>; và <b>Tự khởi động</b> → bật <b>ntfy</b>.</li></ol>'+
+    '<div class="mono" style="font-size:17px;text-align:center">'+esc(topic||'(đang tạo mã…)')+'</div>'+
+    '<div class="acts"><button class="btn gh" data-a="copy" data-v="'+esc(topic)+'">📋 Sao chép mã</button><a class="btn gh" style="text-align:center;text-decoration:none" href="ntfy://'+esc(host)+'/'+esc(topic)+'">🔔 Mở bằng app ntfy</a></div></div>';
+}
+function htmlKenh(){
+  var u=S.d.user,k=u.kenh||'ONESIGNAL';
+  return '<div class="fg" style="margin-top:8px">'+oLoc('Nhận qua','kenh',KENH,k)+'</div>'+
+    (k!=='NTFY'?'<div class="box"><b>🔔 OneSignal</b><div id="pushBox">'+htmlPush()+'</div></div>':'')+
+    (k!=='ONESIGNAL'?htmlNtfy(u.ntfy):'')+
+    '<div class="acts"><button class="btn ok" data-a="thuTB" data-v="">🔔 Gửi thông báo thử</button></div>';
+}
+C.kenh=function(v){S.d.user.kenh=v;ve();call('luuKenh',{kenh:v},function(r){S.d.user.kenh=r.kenh;S.d.user.ntfy=r.ntfy;luuD();ve();toast('Đã lưu kênh nhận thông báo')},'nen')};
 function veToi(){
-  return '<div class="card"><b>🔔 Thông báo trên điện thoại</b><div class="meta">Thông báo hiện lên như app ngân hàng: nhắc việc, kết quả duyệt, trừ điểm. Bấm vào thông báo là mở đúng việc.</div><div id="pushBox">'+htmlPush()+'</div></div>'+
+  return '<div class="card"><b>🔔 Thông báo trên điện thoại</b><div class="meta">Thông báo hiện lên như app ngân hàng: nhắc việc, kết quả duyệt, trừ điểm. Bấm vào thông báo là mở đúng việc.</div>'+htmlKenh()+'</div>'+
   '<div class="card"><b>🔑 Đổi mật khẩu</b><label style="display:block;margin-top:8px">Mật khẩu hiện tại</label><input type="password" id="f_m1"><label>Mật khẩu mới (≥ 4 ký tự)</label><input type="password" id="f_m2">'+
   '<button class="btn ok" style="width:100%" data-a="doiMK">Lưu mật khẩu</button></div><div class="meta" style="text-align:center">Phiên bản '+esc(S.d.phienBan)+'</div>';
 }
@@ -757,13 +778,13 @@ function veCD(){
     '<label>App API Key '+(pc.coKey?'<span class="tag b-grn">đã lưu</span>':'')+'</label><input id="f_oskey" placeholder="'+(pc.coKey?'để trống nếu giữ nguyên':'os_v2_app_…')+'">'+
     '<label>Link app (tự điền)</label><input id="f_appurl" value="'+esc(location.origin+BASE)+'" readonly>'+
     '<button class="btn ok" style="width:100%" data-a="luuPush">Lưu</button></div>'+
-    '<div class="card"><b>Máy của tôi</b><div id="pushBox">'+htmlPush()+'</div></div>'+
+    '<div class="card"><b>Máy của tôi – nhận thông báo qua</b>'+htmlKenh()+'</div>'+
     '<div class="meta" style="margin:4px">Tổ trưởng tự bật ở tab <b>Thông báo</b> trên điện thoại của mình. Kết quả từng lần gửi xem ở sheet <b>NhatKyGui</b> ("onesignal ok" là gửi thành công).</div>';
   } else if(S.cdTab==='tk'){
     h+='<button class="btn ok" style="width:100%;margin-bottom:8px" data-a="suaUser" data-v="">➕ Thêm tài khoản</button>';
     c.users.forEach(function(u){
       h+='<div class="card"><div class="row sp"><div><b>'+esc(u.hoTen)+'</b> <span class="meta">@'+esc(u.tenDN)+'</span><div class="row" style="margin-top:3px"><span class="tag '+(u.vaiTro==='TBP'?'b-pur':'b-blu')+'">'+(u.vaiTro==='TBP'?'Trưởng bộ phận':'Tổ trưởng')+'</span><span class="tag">'+esc(u.khuVuc||'Tất cả')+'</span>'+(u.hoatDong?'':'<span class="tag b-red">Đã khóa</span>')+(u.nhanTB?'':'<span class="tag">Tắt thông báo</span>')+'</div></div></div>'+
-      (u.teams?'<div class="meta">Teams: có</div>':'')+(u.vaiTro==='TO_TRUONG'&&u.xemCua?'<div class="meta">👁 Được xem thêm: '+esc(/tất cả/i.test(u.xemCua)?'tất cả tổ trưởng':u.xemCua.split(/\s*,\s*/).map(tenUser).join(', '))+'</div>':'')+
+      '<div class="meta">🔔 Nhận qua: <b>'+({ONESIGNAL:'OneSignal',NTFY:'ntfy',CA_HAI:'OneSignal + ntfy'})[u.kenh||'ONESIGNAL']+'</b>'+(u.kenh&&u.kenh!=='ONESIGNAL'&&u.ntfy?' · mã ntfy: '+esc(u.ntfy):'')+'</div>'+(u.teams?'<div class="meta">Teams: có</div>':'')+(u.vaiTro==='TO_TRUONG'&&u.xemCua?'<div class="meta">👁 Được xem thêm: '+esc(/tất cả/i.test(u.xemCua)?'tất cả tổ trưởng':u.xemCua.split(/\s*,\s*/).map(tenUser).join(', '))+'</div>':'')+
       '<div class="acts"><button class="btn gh sm" data-a="suaUser" data-v="'+esc(u.tenDN)+'">✏️ Sửa</button><button class="btn gh sm" data-a="hdUser" data-v="'+esc(u.tenDN)+'">🔗 Link vào nhanh</button><button class="btn gh sm" data-a="thuTB" data-v="'+esc(u.tenDN)+'">🔔 Gửi thử</button></div></div>';
     });
   } else if(S.cdTab==='ts'){
@@ -809,6 +830,7 @@ function veFormUser(){
   (F.vt==='TO_TRUONG'?'<label>Được xem việc của (chỉ xem, không thao tác)</label><div class="chips wrap"><button class="chip '+(F.xem.indexOf('*')>=0?'on':'')+'" data-a="uXem" data-v="*">Tất cả tổ trưởng</button>'+
     S.d.users.filter(function(x){return x.vaiTro==='TO_TRUONG'&&(!u||x.tenDN!==u.tenDN)}).map(function(x){return '<button class="chip '+(F.xem.indexOf(x.tenDN)>=0?'on':'')+'" data-a="uXem" data-v="'+esc(x.tenDN)+'">'+esc(x.hoTen)+'</button>'}).join('')+'</div>':'')+
   '<label>'+(u?'Mật khẩu mới (để trống nếu không đổi)':'Mật khẩu *')+'</label><input id="f_mk" type="text" autocomplete="off" value="'+esc(g('f_mk',''))+'">'+
+  '<label>Nhận thông báo qua</label><select id="f_kenh">'+KENH.map(function(x){return '<option value="'+x[0]+'"'+((g('f_kenh',u&&u.kenh||'ONESIGNAL'))===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select>'+
   '<label>Link Teams Workflows (không bắt buộc)</label><input id="f_teams" value="'+esc(g('f_teams',u?u.teams:''))+'">'+
   '<label class="ck"><input type="checkbox" id="f_nhanTB" '+(F.nhanTB?'checked':'')+'>Nhận thông báo (TBP: đề xuất, hoàn thành, tổng hợp)</label>'+
   '<label class="ck"><input type="checkbox" id="f_hd" '+(F.hd?'checked':'')+'>Đang hoạt động (bỏ tích = khóa tài khoản)</label>'+
@@ -970,7 +992,7 @@ var A={
   luuPush:function(){call('luuPush',{appId:val('f_osid').trim(),apiKey:val('f_oskey').trim(),appUrl:location.origin+BASE},function(){toast('Đã lưu. Đang khởi động thông báo…');S.pushCfg=null;S.cd=null;taiLai(function(){S.cdTab='push'})})},
   luuUser:function(){var u=F.user,kv=S.d.cfg.khuVuc.filter(function(k){return F.kv.indexOf(k)>=0});
     var o={tenCu:u?u.tenDN:'',tenDN:val('f_ten').trim().toLowerCase(),hoTen:val('f_hoten'),vaiTro:F.vt,khuVuc:kv.length===S.d.cfg.khuVuc.length?'Tất cả':kv.join(', '),
-      matKhau:val('f_mk'),xemCua:F.vt==='TO_TRUONG'?(F.xem.indexOf('*')>=0?'Tất cả':F.xem.join(', ')):'',ntfy:'',teams:val('f_teams').trim(),nhanTB:$('f_nhanTB').checked,hoatDong:$('f_hd').checked,doiMa:$('f_doiMa')?$('f_doiMa').checked:false};
+      matKhau:val('f_mk'),xemCua:F.vt==='TO_TRUONG'?(F.xem.indexOf('*')>=0?'Tất cả':F.xem.join(', ')):'',ntfy:'',kenh:val('f_kenh'),teams:val('f_teams').trim(),nhanTB:$('f_nhanTB').checked,hoatDong:$('f_hd').checked,doiMa:$('f_doiMa')?$('f_doiMa').checked:false};
     if(!kv.length)return toast('Chọn ít nhất 1 khu vực');
     call('luuNguoiDung',{obj:o},function(){dong();toast('Đã lưu tài khoản');taiCD(true);taiLai()})},
   luuTS:function(){var v={};S.cd.thamSo.forEach(function(t){v[t.k]=val('ts_'+t.k)});call('luuThamSo',{vals:v},function(){toast('Đã lưu tham số');S.tk=null;taiCD(true);taiLai()})},
