@@ -45,6 +45,15 @@ nav.bot .bd{position:absolute;top:3px;left:50%;margin-left:6px;background:var(--
 .d{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--bg);color:var(--mu);border:1px solid var(--bd)}
 .d.ok{background:var(--pri2);color:var(--pri);border-color:transparent}.d.tre{background:var(--amb2);color:var(--amb);border-color:transparent}
 .d.x{background:var(--red2);color:var(--red);border-color:transparent}.d.cd{background:var(--pur2);color:var(--pur);border-color:transparent}
+.fg{display:grid;grid-template-columns:104px minmax(0,1fr);gap:7px 10px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.fg .fl{font-size:13px;color:var(--mu);font-weight:600}
+.fg select,.fg input{margin:0;padding:8px 10px;font-size:15px;min-width:0;width:100%}
+.fg .two>input{flex:1;min-width:0;padding:8px 6px;font-size:14px}
+.fg select{appearance:auto;-webkit-appearance:menulist}
+.kv{display:grid;grid-template-columns:118px 1fr;gap:2px 8px;font-size:13px;margin-top:4px}.kv span{color:var(--mu)}.kv b{font-weight:600}
+.tt6{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.tt6 button{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:6px 4px;font-size:12px;color:var(--mu)}
+.tt6 button b{display:block;font-size:20px;line-height:1.2}.tt6 button.on{outline:2px solid var(--pri);color:var(--tx)}
 .flt{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 8px 2px;margin-bottom:8px}
 .flt .chips{padding-bottom:6px}.flt label{margin-left:2px}
 .nvbox{background:var(--pur2);border-radius:10px;padding:8px 10px;margin-top:8px}
@@ -144,7 +153,7 @@ function batPush(){
 </script>
 <script>
 /* ================= TIỆN ÍCH ================= */
-var S={f:{tg:'xl',lop:'',tt:'mo',tu:'',den:''},th:{},thMo:{},dangTai:0,lanTai:0,lv:'',tq:'',token:null,d:null,tab:'',thang:null,nam:null,loc:{nguoi:'',khu:'',dong:false},mo:{},sap:false,cd:null,cdTab:'tk',tk:null,tkNam:null,qViec:'',kvViec:'',nk:{}};
+var S={f:{tg:'bao',lop:'',tt:'mo',tu:'',den:''},th:{},thMo:{},dangTai:0,lanTai:0,lv:'',tq:'',token:null,d:null,tab:'',thang:null,nam:null,loc:{nguoi:'',khu:'',dong:false},mo:{},sap:false,cd:null,cdTab:'tk',tk:null,tkNam:null,qViec:'',kvViec:'',nk:{}};
 var F={};
 var LS={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}},del:function(k){try{localStorage.removeItem(k)}catch(e){}}};
 S.token=LS.get('mtcc_tk');
@@ -360,43 +369,34 @@ function boLoc(){
   S.d.cfg.khuVuc.forEach(function(k){h+='<button class="chip '+(S.loc.khu===k?'on':'')+'" data-a="loc" data-k="khu" data-v="'+esc(k)+'">'+esc(k)+'</button>'});
   return h+'</div>';
 }
-function veViec(){
-  var T=S.d.today,ds=locDS(),h=bannerPush();
-  if(laTBP()){
-    h+=boLoc()+'<div class="chips"><button class="chip '+(!S.loc.dong?'on':'')+'" data-a="loc" data-k="dong" data-v="">Đang mở</button><button class="chip '+(S.loc.dong?'on':'')+'" data-a="loc" data-k="dong" data-v="1">Đã đóng (45 ngày)</button></div>';
-    if(S.loc.dong)return h+veDong(ds);
-  }
-  var g={qh:[],xn:[],nhan:[],lam:[],cd:[],sap:[]};
-  ds.filter(function(o){return o.mo}).forEach(function(o){
-    if(o.tt==='QUA_HAN')g.qh.push(o);else if(o.tt==='CHO_XN')g.xn.push(o);else if(o.tt==='CHO_DUYET')g.cd.push(o);else if(o.tt==='DA_NHAN')g.lam.push(o);else if(o.ngayBao<=T)g.nhan.push(o);else g.sap.push(o);
-  });
-  var NH=[['qh','❗ Quá hạn'],['xn','📷 Ảnh NV chờ xác nhận'],['nhan','✋ Cần nhận việc'],['lam','🔧 Đang làm'],['cd','🟣 Chờ TBP duyệt'],['sap','🗓 Sắp tới']];
-  var tong=g.qh.length+g.xn.length+g.nhan.length+g.lam.length+g.cd.length;
-  h+='<div class="chips"><button class="chip '+(!S.lv?'on':'')+'" data-a="lv" data-v="">Cần xử lý ('+tong+')</button>'+NH.filter(function(x){return g[x[0]].length}).map(function(x){return '<button class="chip '+(S.lv===x[0]?'on':'')+'" data-a="lv" data-v="'+x[0]+'">'+x[1].split(' ')[0]+' '+x[1].split(' ').slice(1).join(' ')+' ('+g[x[0]].length+')</button>'}).join('')+'</div>';
-  if(S.lv)return h+nhom(NH.filter(function(x){return x[0]===S.lv})[0][1],g[S.lv]||[]);
-  NH.slice(0,5).forEach(function(x){h+=nhom(x[1],g[x[0]])});
-  if(!tong)h+='<div class="empty">🎉 Hiện không có việc cần xử lý'+(g.sap.length?'<br><span class="meta">Có '+g.sap.length+' việc sắp tới – bấm 🗓 Sắp tới để xem</span>':'')+'</div>';
-  return h;
-}
 function veDong(ds){
   var x=ds.filter(function(o){return !o.mo}).sort(function(a,b){var ka=(a.hoanThanhLuc||a.hanHienTai),kb=(b.hoanThanhLuc||b.hanHienTai);return ka<kb?1:-1});
   return x.length?x.map(the).join(''):'<div class="empty">Chưa có việc đã đóng</div>';
 }
 function veXong(){return veDong(locDS())}
+/* ================= BỘ LỌC DẠNG BẢNG 2 CỘT (nhãn | ô chọn) ================= */
+function oLoc(nhan,ten,ds,gt){
+  return '<div class="fl">'+nhan+'</div><select data-c="'+ten+'">'+ds.map(function(x){return '<option value="'+esc(x[0])+'"'+(x[0]===gt?' selected':'')+'>'+esc(x[1])+'</option>'}).join('')+'</select>';
+}
+var DS_LOP=[['','Tất cả loại'],['TUAN','🔁 Công việc tuần'],['THANG','📅 Công việc tháng'],['QUY','🗓 Công việc quý / định kỳ dài'],['PS','➕ Công việc phát sinh']];
+function locNguoi(){var xem=S.d.xem||[];return xem.length>1?oLoc('Tổ trưởng','nguoi',[['','Tất cả tổ trưởng']].concat(xem.map(function(t){return [t,tenUser(t)]})),S.loc.nguoi):''}
+function locKhu(){var xem=S.d.xem||[];return laTBP()||xem.length>1?oLoc('Khu vực','khu',[['','Tất cả khu vực']].concat(S.d.cfg.khuVuc.map(function(k){return [k,k]})),S.loc.khu):''}
+function locLop(){return oLoc('Loại kế hoạch','lop',DS_LOP,S.f.lop)}
+var C={
+  nguoi:function(v){S.loc.nguoi=v;veLaiLoc()},khu:function(v){S.loc.khu=v;veLaiLoc()},lop:function(v){S.f.lop=v;veLaiLoc()},
+  tg:function(v){S.f.tg=v;if(v==='tuy'){if(!S.f.tu){S.f.tu=S.d.today;S.f.den=add(S.d.today,13)}taiTuy()}ve()},
+  tt:function(v){S.f.tt=v;ve()}
+};
+function veLaiLoc(){if(S.tab==='tq')veTH();else ve()}
+document.addEventListener('change',function(e){var el=e.target.closest('[data-c]');if(el&&C[el.getAttribute('data-c')])C[el.getAttribute('data-c')](el.value,el)});
+
 function taiTH(){
   var th=S.th[S.thang];veTH();
   if(!th)call('tongHop',{thang:S.thang},function(r){S.th[r.thang]=r;veTH()},'nen');
 }
-function chipNguoiKhu(){
-  var h='',xem=S.d.xem||[];
-  if(xem.length>1)h+='<div class="chips"><button class="chip '+(!S.loc.nguoi?'on':'')+'" data-a="loc" data-k="nguoi" data-v="">Tất cả</button>'+xem.map(function(t){return '<button class="chip '+(S.loc.nguoi===t?'on':'')+'" data-a="loc" data-k="nguoi" data-v="'+esc(t)+'">'+esc(tenUser(t))+'</button>'}).join('')+'</div>';
-  if(laTBP()||xem.length>1)h+='<div class="chips"><button class="chip '+(!S.loc.khu?'on':'')+'" data-a="loc" data-k="khu" data-v="">Mọi khu vực</button>'+S.d.cfg.khuVuc.map(function(k){return '<button class="chip '+(S.loc.khu===k?'on':'')+'" data-a="loc" data-k="khu" data-v="'+esc(k)+'">'+esc(k)+'</button>'}).join('')+'</div>';
-  return h;
-}
 function veTH(){
   var el=$('th');if(!el)return;var r=S.th[S.thang];
-  var h=bannerPush()+'<div class="flt"><label>Tháng</label><input type="month" id="f_thangTH" value="'+esc(S.thang)+'" style="margin:2px 0 8px">'+chipNguoiKhu()+
-    '<div class="chips">'+[['','Mọi hạng mục'],['TUAN','🔁 Tuần'],['THANG','📅 Tháng'],['QUY','🗓 Quý'],['PS','➕ Phát sinh']].map(function(x){return '<button class="chip '+(S.f.lop===x[0]?'on':'')+'" data-a="fLop" data-v="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div></div>';
+  var h=bannerPush()+'<div class="fg"><div class="fl">Tháng</div><input type="month" id="f_thangTH" value="'+esc(S.thang)+'">'+locNguoi()+locKhu()+locLop()+'</div>';
   if(!r){el.innerHTML=h+'<div class="empty">Đang tải tổng hợp tháng…</div>';ganTH();return}
   var ds=r.ds.filter(function(g){return (!S.loc.nguoi||g.phuTrach===S.loc.nguoi)&&(!S.loc.khu||g.khuVuc===S.loc.khu)&&(!S.f.lop||g.lop===S.f.lop)});
   var t={tong:0,ht:0,qh:0,kh:0};ds.forEach(function(g){t.tong+=g.tong;t.ht+=g.ht;t.qh+=g.quaHan;t.kh+=g.khongHT});
@@ -413,8 +413,7 @@ function veTH(){
       h+='<div class="card" data-a="thMo" data-v="'+esc(x.key)+'" style="cursor:pointer"><div class="row sp"><span class="meta" style="margin:0">'+esc(x.khuVuc)+(nhieu?' · 👤 '+esc(x.phuTrachTen):'')+'</span>'+
         '<b style="color:'+(x.khongHT||x.quaHan?'var(--red)':pc===100?'var(--pri)':'var(--tx)')+'">Tiến độ '+x.ht+'/'+x.tong+'</b></div>'+
         '<div class="ttl">'+esc(x.ten)+'</div><div class="prog"><i style="width:'+pc+'%"></i></div>'+
-        '<div class="meta">🔁 Định kỳ: '+esc(x.lich||'')+'</div>'+
-        '<div class="meta">✅ Ngày hoàn thành: <b>'+(htNgay.length?htNgay.join(', '):'chưa có')+'</b></div>'+
+        '<div class="kv"><span>Định kỳ</span><b>'+esc(x.lich||'')+'</b><span>Ngày hoàn thành</span><b style="color:var(--pri)">'+(htNgay.length?htNgay.join(', '):'<span style="color:var(--mu);font-weight:400">chưa có</span>')+'</b></div>'+
         '<div class="days">'+x.lan.map(function(n){var c=n.tt==='HOAN_THANH'?(n.tre?'tre':'ok'):n.tt==='KHONG_HT'||n.tt==='QUA_HAN'?'x':n.tt==='CHO_DUYET'||n.tt==='CHO_XN'?'cd':'';
           return '<span class="d '+c+'">'+(n.tt==='HUY'?'<s>':'')+n.han.slice(8)+'/'+n.han.slice(5,7)+(n.tt==='HUY'?'</s>':'')+(c==='ok'?' ✓':c==='tre'?' ✓trễ':c==='x'?' ✗':'')+'</span>'}).join('')+'</div>';
       if(mo)h+='<div class="box">'+x.lan.map(function(n){return '<div class="row sp"><span>Hạn '+nn(n.han)+'</span><span>'+(TT[n.tt]?TT[n.tt][0]:n.tt)+(n.ht?' · '+n.ht.slice(8)+'/'+n.ht.slice(5,7):'')+'</span></div>'}).join('')+
@@ -428,46 +427,52 @@ function veTH(){
 }
 function ganTH(){var e=$('f_thangTH');if(e)e.onchange=function(){if(this.value){S.thang=this.value;S.tk=null;taiTH()}}}
 
-/* ---------- tab Việc: lọc theo thời gian, hạng mục, trạng thái ---------- */
+/* ---------- tab Việc ---------- */
+var TT_LOC=[['mo','Tất cả việc đang mở'],['qh','❗ Quá hạn'],['lam','🔧 Đã nhận – đang làm'],['xn','📷 Ảnh NV chờ xác nhận'],['chua','✋ Chưa nhận'],['cd','🟣 Chờ TBP duyệt'],['xong','✅ Đã xong / đã đóng'],['all','Tất cả trạng thái']];
+var TG_LOC=[['bao','Đến ngày cần làm'],['nay','Hôm nay'],['3','3 ngày tới'],['7','7 ngày tới'],['thang','Tháng này'],['tuy','📅 Tùy chọn ngày…']];
+function phanLoai(o){return !o.mo?'xong':o.tt==='QUA_HAN'?'qh':o.tt==='CHO_XN'?'xn':o.tt==='CHO_DUYET'?'cd':o.tt==='DA_NHAN'?'lam':'chua'}
 function khoangLoc(){
   var T=S.d.today,f=S.f;
-  if(f.tg==='3')return [T,add(T,2)];if(f.tg==='7')return [T,add(T,6)];
+  if(f.tg==='nay')return [T,T];if(f.tg==='3')return [T,add(T,2)];if(f.tg==='7')return [T,add(T,6)];
   if(f.tg==='thang'){var m=T.slice(0,7),y=+m.slice(0,4),mo=+m.slice(5);return [m+'-01',m+'-'+String(new Date(Date.UTC(y,mo,0)).getUTCDate()).padStart(2,'0')]}
-  return [f.tu,f.den];
+  if(f.tg==='tuy')return [f.tu,f.den];
+  return null;
 }
-function boLocViec(){
-  var f=S.f,h='<div class="flt"><div class="chips">'+[['xl','⚡ Cần xử lý'],['3','3 ngày tới'],['7','7 ngày tới'],['thang','Tháng này'],['tuy','📅 Tùy chọn…']].map(function(x){return '<button class="chip '+(f.tg===x[0]?'on':'')+'" data-a="fTg" data-v="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>';
-  if(f.tg==='tuy')h+='<div class="two"><div><label>Từ ngày</label><input type="date" id="f_tu" value="'+esc(f.tu)+'" style="margin:2px 0 6px"></div><div><label>Đến ngày</label><input type="date" id="f_den" value="'+esc(f.den)+'" style="margin:2px 0 6px"></div></div><button class="btn ok" style="width:100%;margin:0 0 8px;padding:9px" data-a="fApDung">🔍 Lọc theo khoảng ngày</button>';
-  h+='<div class="chips">'+[['','Mọi hạng mục'],['TUAN','🔁 Tuần'],['THANG','📅 Tháng'],['QUY','🗓 Quý'],['PS','➕ Phát sinh']].map(function(x){return '<button class="chip '+(f.lop===x[0]?'on':'')+'" data-a="fLop" data-v="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>';
-  if(f.tg!=='xl')h+='<div class="chips">'+[['mo','Đang mở'],['xong','Đã xong / đã đóng'],['all','Tất cả trạng thái']].map(function(x){return '<button class="chip '+(f.tt===x[0]?'on':'')+'" data-a="fTt" data-v="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>';
-  return h+chipNguoiKhu()+'</div>';
+function trongThoiGian(o){
+  var T=S.d.today,k=khoangLoc();
+  if(!k){ // Đến ngày cần làm: việc đã tới ngày báo / đang xử lý; việc đã đóng trong 7 ngày qua
+    if(o.mo)return o.ngayBao<=T||o.tt!=='CHO_NHAN';
+    return (o.hoanThanhLuc||o.hanCuoi||o.hanHienTai).slice(0,10)>=add(T,-7);
+  }
+  if(o.hanHienTai>=k[0]&&o.hanHienTai<=k[1])return true;
+  return S.f.tg!=='tuy'&&S.f.tg!=='thang'&&o.mo&&o.hanHienTai<k[0]; // kèm việc đang quá hạn
 }
 function veViec(){
   var T=S.d.today,f=S.f,h=bannerPush();
+  if(!TG_LOC.some(function(x){return x[0]===f.tg}))f.tg='bao';
+  if(!TT_LOC.some(function(x){return x[0]===f.tt}))f.tt='mo';
   if(laTBP())h+='<button class="btn ok" style="width:100%;margin-bottom:8px" data-a="giaops">➕ Giao việc phát sinh</button>';
-  h+=boLocViec();
+  h+='<div class="fg">'+locNguoi()+locLop()+oLoc('Thời gian','tg',TG_LOC,f.tg);
+  if(f.tg==='tuy')h+='<div class="fl">Từ – đến</div><div class="two" style="gap:6px"><input type="date" id="f_tu" value="'+esc(f.tu)+'"><input type="date" id="f_den" value="'+esc(f.den)+'"></div><div></div><button class="btn ok sm" style="width:100%" data-a="fApDung">🔍 Lọc theo khoảng ngày</button>';
+  h+=oLoc('Trạng thái','tt',TT_LOC,f.tt)+locKhu()+'</div>';
   var nguon=f.tg==='tuy'?(S.dsTuy&&S.dsTuy.tu===f.tu&&S.dsTuy.den===f.den?S.dsTuy.ds:null):S.d.ds;
   if(!nguon)return h+'<div class="empty">'+(f.tu&&f.den?'Đang tải…':'Chọn từ ngày – đến ngày rồi bấm Lọc')+'</div>';
-  var ds=nguon.filter(function(o){return (!S.loc.nguoi||o.phuTrach===S.loc.nguoi)&&(!S.loc.khu||o.khuVuc===S.loc.khu)&&(!f.lop||o.lop===f.lop)});
-  if(f.tg==='xl'){
-    var g={qh:[],xn:[],nhan:[],lam:[],cd:[]};
-    ds.filter(function(o){return o.mo}).forEach(function(o){
-      if(o.tt==='QUA_HAN')g.qh.push(o);else if(o.tt==='CHO_XN')g.xn.push(o);else if(o.tt==='CHO_DUYET')g.cd.push(o);else if(o.tt==='DA_NHAN')g.lam.push(o);else if(o.ngayBao<=T)g.nhan.push(o)});
-    h+=nhom('❗ Quá hạn',g.qh)+nhom('📷 Ảnh NV chờ xác nhận',g.xn)+nhom('✋ Cần nhận việc',g.nhan)+nhom('🔧 Đang làm',g.lam)+nhom('🟣 Chờ TBP duyệt',g.cd);
-    if(!(g.qh.length+g.xn.length+g.nhan.length+g.lam.length+g.cd.length))h+='<div class="empty">🎉 Hiện không có việc cần xử lý<br><span class="meta">Chọn "7 ngày tới" hoặc "Tháng này" để xem việc sắp tới</span></div>';
-    return h;
+  var ds=nguon.filter(function(o){return (!S.loc.nguoi||o.phuTrach===S.loc.nguoi)&&(!S.loc.khu||o.khuVuc===S.loc.khu)&&(!f.lop||o.lop===f.lop)&&trongThoiGian(o)});
+  // thanh đếm theo trạng thái – bấm để nhảy nhanh
+  var dem={};ds.forEach(function(o){var k=phanLoai(o);dem[k]=(dem[k]||0)+1});
+  var NHOM=[['qh','❗','Quá hạn','red'],['lam','🔧','Đang làm','amb'],['xn','📷','Ảnh NV','pur'],['chua','✋','Chưa nhận','blu'],['cd','🟣','Chờ duyệt','pur'],['xong','✅','Đã xong','pri']];
+  h+='<div class="tt6">'+NHOM.map(function(x){return '<button class="'+(f.tt===x[0]?'on':'')+'" data-a="fTt" data-v="'+(f.tt===x[0]?'mo':x[0])+'"><b style="color:var(--'+(dem[x[0]]?x[3]:'mu')+')">'+(dem[x[0]]||0)+'</b>'+x[1]+' '+x[2]+'</button>'}).join('')+'</div>';
+  var loc=ds.filter(function(o){return f.tt==='all'||(f.tt==='mo'?o.mo:phanLoai(o)===f.tt)}).sort(function(a,b){return a.hanHienTai<b.hanHienTai?-1:a.hanHienTai>b.hanHienTai?1:0});
+  if(f.tt==='mo'||f.tt==='all'){
+    NHOM.forEach(function(x){if(x[0]==='xong'&&f.tt==='mo')return;var g=loc.filter(function(o){return phanLoai(o)===x[0]});
+      if(g.length)h+='<div class="lopH" id="nh_'+x[0]+'">'+x[1]+' '+({qh:'Quá hạn – cần làm ngay',lam:'Đã nhận – đang làm',xn:'Ảnh nhân viên chờ xác nhận',chua:'Chưa nhận việc',cd:'Chờ TBP duyệt đề xuất',xong:'Đã xong / đã đóng'})[x[0]]+' <span>'+g.length+'</span></div>'+g.map(the).join('')});
+  } else {
+    ['TUAN','THANG','QUY','PS'].forEach(function(l){var g=loc.filter(function(o){return o.lop===l});if(g.length)h+='<div class="lopH">'+LOP[l][0]+' '+LOP[l][1]+' <span>'+g.length+'</span></div>'+g.map(the).join('')});
   }
-  var k=khoangLoc();
-  ds=ds.filter(function(o){
-    var trong=o.hanHienTai>=k[0]&&o.hanHienTai<=k[1],quaHan=(f.tg==='3'||f.tg==='7')&&o.mo&&o.hanHienTai<k[0];
-    if(!trong&&!quaHan)return false;
-    return f.tt==='all'||(f.tt==='mo'?o.mo:!o.mo);
-  }).sort(function(a,b){return a.hanHienTai<b.hanHienTai?-1:a.hanHienTai>b.hanHienTai?1:0});
-  h+='<div class="meta" style="margin:0 4px">'+ds.length+' việc · hạn từ '+nn(k[0])+' đến '+nn(k[1])+((f.tg==='3'||f.tg==='7')&&f.tt!=='xong'?' (kèm việc đang quá hạn)':'')+'</div>';
-  ['TUAN','THANG','QUY','PS'].forEach(function(l){var x=ds.filter(function(o){return o.lop===l});if(x.length)h+='<div class="lopH">'+LOP[l][0]+' '+LOP[l][1]+' <span>'+x.length+'</span></div>'+x.map(the).join('')});
-  if(!ds.length)h+='<div class="empty">Không có việc phù hợp bộ lọc</div>';
+  if(!loc.length)h+='<div class="empty">'+(f.tg==='bao'&&f.tt==='mo'?'🎉 Hiện không có việc cần xử lý<br><span class="meta">Chọn Thời gian "7 ngày tới" hoặc "Tháng này" để xem việc sắp tới</span>':'Không có việc phù hợp bộ lọc')+'</div>';
   return h;
 }
+
 function veXuLy(){
   var T=S.d.today,ds=S.d.ds,h=bannerPush();
   var cd=ds.filter(function(o){return o.tt==='CHO_DUYET'}),qh=ds.filter(function(o){return o.tt==='QUA_HAN'}),xn=ds.filter(function(o){return o.tt==='CHO_XN'});
@@ -900,7 +905,10 @@ var A={
   sapToi:function(){S.sap=!S.sap;ve()},
   loc:function(d){S.loc[d.k]=d.k==='dong'?!!d.v:d.v;if(S.tab==='tq')veTH();else ve()},
   nhatky:function(d){dong();call('lichSu',{ma:d.ma},function(r){S.nk[d.ma]=r.ds;S.mo[d.ma]=true;ve();var c=$('c_'+d.ma);if(c)c.scrollIntoView({block:'center'})},'nen')},
-  nhan:function(d){ghi('tacVu',{ma:d.ma,loai:'NHAN'},{lac:function(x){x.tt='DA_NHAN';x.trangThaiGoc='DA_NHAN'},msgTruoc:'Đã nhận việc'})},
+  nhan:function(d){var o=timO(d.ma);ghi('tacVu',{ma:d.ma,loai:'NHAN'},{lac:function(x){x.tt='DA_NHAN';x.trangThaiGoc='DA_NHAN'}});
+    moForm('<h4>✅ Đã nhận việc</h4><div class="meta">'+esc(o.khuVuc)+' · '+esc(o.ten)+' · hạn '+nn(o.hanHienTai)+'</div><div class="menu" style="margin-top:8px">'+
+      '<button class="btn ok" data-a="linkNV" data-ma="'+esc(o.ma)+'">🔗 Gửi link cho nhân viên làm</button><button class="btn gh" data-a="ht" data-ma="'+esc(o.ma)+'">📷 Tự chụp ảnh báo hoàn thành</button>'+
+      '<button class="btn gh" data-a="dong" style="text-align:center">Để sau</button></div><div class="meta">Việc này nằm trong nhóm 🔧 Đã nhận – đang làm (ngay dưới nhóm Quá hạn).</div>')},
   chuyen:function(d){dong();formLyDo('📅 Đề xuất đổi ngày',d.ma,'guiChuyen',true)},
   huy:function(d){dong();formLyDo('✖ Đề xuất hủy việc',d.ma,'guiHuy')},
   guiChuyen:function(d){ghi('tacVu',{ma:d.ma,loai:'CHUYEN',ngay:val('f_ngay'),lyDo:val('f_ly')},{chan:true,sau:function(){dong()},msg:'Đã gửi đề xuất, chờ TBP duyệt'})},
@@ -1004,7 +1012,7 @@ function moTuLink(){
   if(!o){toast('Không tìm thấy việc – có thể đã đóng');return}
   S.loc.nguoi='';S.loc.khu='';S.f.lop='';
   if(laTBP()&&(o.tt==='CHO_DUYET'||o.tt==='HOAN_THANH'&&o.hoanThanhLuc.slice(0,10)>=add(S.d.today,-7))){S.tab='xl';S.tq=''}
-  else{S.tab='viec';if(o.mo&&(o.ngayBao<=S.d.today||o.tt!=='CHO_NHAN'))S.f.tg='xl';else{S.f.tg='tuy';S.f.tt='all';S.f.tu=o.hanHienTai;S.f.den=o.hanHienTai;S.dsTuy={tu:o.hanHienTai,den:o.hanHienTai,ds:[o]}}}
+  else{S.tab='viec';if(o.mo&&(o.ngayBao<=S.d.today||o.tt!=='CHO_NHAN')){S.f.tg='bao';S.f.tt='mo'}else{S.f.tg='tuy';S.f.tt='all';S.f.tu=o.hanHienTai;S.f.den=o.hanHienTai;S.dsTuy={tu:o.hanHienTai,den:o.hanHienTai,ds:[o]}}}
   S.mo[o.ma]=true;if(o.ngayBao>S.d.today)S.sap=true;ve();
   setTimeout(function(){var c=$('c_'+o.ma);if(c){c.scrollIntoView({block:'center'});c.style.outline='2px solid var(--pri)'}},60);
 }
