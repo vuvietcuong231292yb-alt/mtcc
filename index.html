@@ -127,7 +127,9 @@ var google={script:{get run(){var s=null,f=null,o={withSuccessHandler:function(x
 var BASE=location.pathname.replace(/[^\/]*$/,'');
 var PUSH={os:null,dangTai:false,loi:'',coSub:false,thu:0};
 /** Hỏi thẳng trình duyệt: máy đã có đăng ký nhận thông báo chưa (không phụ thuộc OneSignal tải nhanh hay chậm) */
-function kiemSub(){try{if(!('serviceWorker' in navigator)||!('Notification' in window)||Notification.permission!=='granted')return;navigator.serviceWorker.getRegistration(BASE).then(function(r){return r&&r.pushManager?r.pushManager.getSubscription():null}).then(function(x){var c=!!x;if(c!==PUSH.coSub){PUSH.coSub=c;veLaiPush()}}).catch(function(){})}catch(e){}}
+function kiemSub(){var xong=function(c){var doi=c!==PUSH.coSub||!PUSH.daKiem;PUSH.coSub=c;PUSH.daKiem=true;if(c)LS.set('mtcc_pushok','1');else LS.del('mtcc_pushok');if(doi)veLaiPush()};
+  try{if(!('serviceWorker' in navigator)||!('Notification' in window)||Notification.permission!=='granted')return xong(false);navigator.serviceWorker.getRegistration(BASE).then(function(r){return r&&r.pushManager?r.pushManager.getSubscription():null}).then(function(x){xong(!!x)}).catch(function(){xong(false)})}catch(e){xong(false)}}
+setTimeout(kiemSub,0);
 function laIOS(){return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function laApp(){return navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)}
 function khoiTaoPush(appId,maNguoi){
@@ -145,7 +147,7 @@ function khoiTaoPush(appId,maNguoi){
 function ttPush(){
   var os=PUSH.os,t={coAppId:!!(S.d&&S.d.push&&S.d.push.appId),ios:laIOS(),app:laApp(),hoTro:'Notification' in window&&'serviceWorker' in navigator,quyen:('Notification' in window)?Notification.permission:'default',bat:false};
   try{if(os){t.bat=!!os.User.PushSubscription.optedIn&&t.quyen==='granted'}}catch(e){}
-  if(!t.bat&&t.quyen==='granted'&&PUSH.coSub)t.bat=true;
+  if(!t.bat&&t.quyen==='granted'&&(PUSH.coSub||!PUSH.daKiem&&LS.get('mtcc_pushok')))t.bat=true;
   return t;
 }
 function veLaiPush(){var e=$('pushBox');if(e)e.innerHTML=htmlPush();var b=$('pushBanner');if(b)b.outerHTML=bannerPush()}
@@ -239,14 +241,15 @@ function dangXuat(){
 function luuD(){try{if(S.d)localStorage.setItem('mtcc_d',JSON.stringify(S.d))}catch(e){}}
 function docD(){try{var x=JSON.parse(localStorage.getItem('mtcc_d')||'null');return x&&x.user?x:null}catch(e){return null}}
 function nhanDuLieu(r){
-  var dau=!S.d;S.d=r;S.lanTai=Date.now();luuD();
-  if(!S.tab||!dsTab().some(function(t){return t[0]===S.tab}))S.tab=laTBP()?'tq':'viec';S.th={};if(!S.thang)S.thang=r.today.slice(0,7);
+  var dau=!S.d,th=r.th;delete r.th;S.d=r;S.lanTai=Date.now();luuD();
+  if(!S.tab||!dsTab().some(function(t){return t[0]===S.tab}))S.tab=laTBP()?'tq':'viec';if(!S.thang)S.thang=r.today.slice(0,7);S.thMoi={};if(th){S.th[th.thang]=th;S.thMoi[th.thang]=1;luuTH()}
   ve();
   if(r.push&&r.push.appId){if(PUSH.os){try{PUSH.os.login(r.push.maNguoi)}catch(e){}}else khoiTaoPush(r.push.appId,r.push.maNguoi)}
 }
 function taiLai(cb,nen){
+  S.dangTaiData=1;
   if(!nen&&!S.d){var c=docD();if(c){S.d=c;if(!S.tab)S.tab=c.user.vaiTro==='TBP'?'tq':'viec';if(!S.thang)S.thang=c.today.slice(0,7);ve();nen=true}}
-  call('data',{},function(r){nhanDuLieu(r);if(cb)cb()},nen?'nen':false);
+  call('data',{th:S.thang||(S.d&&S.d.today.slice(0,7))||'auto'},function(r){S.dangTaiData=0;nhanDuLieu(r);if(cb)cb()},nen?'nen':false,function(){S.dangTaiData=0;if(S.tab==='tq')taiTH()});
 }
 /* ================= KHUNG ================= */
 function demViec(){
@@ -394,9 +397,13 @@ var C={
 function veLaiLoc(){if(S.tab==='tq')veTH();else ve()}
 document.addEventListener('change',function(e){var el=e.target.closest('[data-c]');if(el&&C[el.getAttribute('data-c')])C[el.getAttribute('data-c')](el.value,el)});
 
+/* Tổng hợp tháng: hiện ngay bản đã lưu trong máy, máy chủ cập nhật ở phía sau */
+function luuTH(){try{var o={};Object.keys(S.th).sort().slice(-3).forEach(function(k){o[k]=S.th[k]});localStorage.setItem('mtcc_th',JSON.stringify(o))}catch(e){}}
+try{S.th=JSON.parse(localStorage.getItem('mtcc_th')||'{}')||{}}catch(e){S.th={}}S.thMoi={};
 function taiTH(){
-  var th=S.th[S.thang];veTH();
-  if(!th)call('tongHop',{thang:S.thang},function(r){S.th[r.thang]=r;veTH()},'nen');
+  veTH();if(S.thMoi[S.thang]||S.dangTH===S.thang)return;
+  if(S.dangTaiData&&S.thang===(S.d&&S.d.today.slice(0,7)))return; // lượt tải dữ liệu đang mang kèm tổng hợp
+  var th=S.thang;S.dangTH=th;call('tongHop',{thang:th},function(r){S.dangTH='';S.th[r.thang]=r;S.thMoi[r.thang]=1;luuTH();if(S.thang===r.thang)veTH()},'nen',function(){S.dangTH=''});
 }
 function veTH(){
   var el=$('th');if(!el)return;var r=S.th[S.thang];
@@ -788,7 +795,7 @@ function htmlPush(){
 }
 function bannerPush(){
   var t=ttPush();
-  if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat)return '<div id="pushBanner"></div>';
+  if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat||!PUSH.daKiem&&!PUSH.os)return '<div id="pushBanner"></div>'; // chưa kiểm tra xong thì chưa nhắc → không nháy khung vàng
   return '<div id="pushBanner" class="card" style="border-color:var(--amb);background:var(--amb2)"><div class="row sp"><span>🔔 <b>Chưa bật thông báo</b> – sẽ không nhận được nhắc việc</span><button class="btn ok sm" data-a="moPush">Bật ngay</button></div></div>';
 }
 /* ---------- Kênh nhận thông báo: OneSignal / ntfy / cả hai ---------- */
