@@ -140,7 +140,7 @@ function khoiTaoPush(appId,maNguoi){
   OneSignalDeferred.push(function(OS){
     return OS.init({appId:appId,serviceWorkerPath:BASE.slice(1)+'sw.js',serviceWorkerParam:{scope:BASE},allowLocalhostAsSecureOrigin:true,autoResubscribe:true})
     .then(function(){PUSH.os=OS;try{OS.User.PushSubscription.addEventListener('change',veLaiPush);OS.Notifications.addEventListener('permissionChange',veLaiPush)}catch(e){}return OS.login(maNguoi)})
-    .then(function(){PUSH.loi='';PUSH.osXong=true;veLaiPush();kiemSub()}).catch(function(e){PUSH.loi=String(e&&e.message||e);kiemSub();veLaiPush();
+    .then(function(){PUSH.loi='';PUSH.osXong=true;veLaiPush();kiemSub();kiemLaiOS()}).catch(function(e){PUSH.loi=String(e&&e.message||e);kiemSub();veLaiPush();
       if(PUSH.os&&PUSH.thu<3){PUSH.thu++;setTimeout(function(){PUSH.os.login(maNguoi).then(function(){PUSH.loi='';veLaiPush()}).catch(function(){})},5000*PUSH.thu)}}); // mạng chậm → tự thử lại
   });
 }
@@ -246,6 +246,7 @@ function nhanDuLieu(r){
   if(!S.tab||!dsTab().some(function(t){return t[0]===S.tab}))S.tab=laTBP()?'tq':'viec';if(!S.thang)S.thang=r.today.slice(0,7);S.thMoi={};if(th){S.th[th.thang]=th;S.thMoi[th.thang]=1;luuTH()}
   ve();
   if(r.push&&r.push.appId){if(PUSH.os){try{PUSH.os.login(r.push.maNguoi)}catch(e){}}else khoiTaoPush(r.push.appId,r.push.maNguoi)}
+  if(osMat()&&PUSH.osXong)setTimeout(kiemLaiOS,1500);
 }
 function taiLai(cb,nen){
   S.dangTaiData=1;
@@ -784,7 +785,8 @@ function xemNam(){
 }
 
 /* ================= THÔNG BÁO CỦA TÔI (tổ trưởng) ================= */
-function htmlPush(){
+function htmlPush(){return dongMayChu()+htmlPush0()}
+function htmlPush0(){
   var t=ttPush(),h='';
   if(!t.coAppId)return '<div class="meta">'+(laTBP()?'Chưa cài OneSignal: điền App ID và App API Key ở trên rồi bấm Lưu.':'Trưởng bộ phận chưa cài đặt thông báo đẩy.')+'</div>';
   if(t.ios&&!t.app)return '<div class="tag b-amb" style="display:block;white-space:normal;margin:6px 0">iPhone chỉ nhận thông báo khi mở app từ màn hình chính.</div>'+
@@ -794,8 +796,22 @@ function htmlPush(){
   if(t.bat)return '<div class="tag b-grn" style="display:block;margin:6px 0;font-size:15px">✅ Đã bật thông báo trên máy này</div><div class="acts"><button class="btn gh" data-a="thuTB" data-v="">🔔 Gửi thông báo thử</button></div>';
   return (PUSH.loi?'<div class="meta" style="color:var(--red)">'+esc(PUSH.loi)+'</div>':'')+'<div class="acts"><button class="btn ok" data-a="batPush">🔔 Bật thông báo</button></div><div class="meta">Khi điện thoại hỏi, chọn <b>Cho phép</b>.</div>';
 }
+/* v5i: kết quả máy chủ hỏi OneSignal – có điện thoại nào đang nhận tin của mình không */
+function osMat(){return !!(S.d&&S.d.user.osTT==='MAT'&&S.d.user.kenh!=='NTFY'&&S.d.push&&S.d.push.appId)}
+function kiemLaiOS(cb){ // máy chủ báo "không có máy" → OneSignal đã sẵn sàng thì nhờ máy chủ kiểm lại 1 lần (thường tự hết sau khi mở app)
+  if(!S.d||!S.token||(!cb&&(!osMat()||S.daKiemOS)))return;S.daKiemOS=1;
+  google.script.run.withSuccessHandler(function(r){var x=r&&r.ok&&(r.ds||[]).filter(function(z){return z.tenDN===S.d.user.tenDN})[0];
+    if(x&&x.tt!=='?'){S.d.user.osTT=x.tt;S.d.user.osSo=x.so;S.d.user.osLuc=x.luc||'';luuD();veLaiPush()}if(cb)cb(x)})
+    .withFailureHandler(function(){if(cb)cb(null)}).api('kiemTB',S.token,{});
+}
+function dongMayChu(){
+  var u=S.d&&S.d.user;if(!u||u.kenh==='NTFY'||!(S.d.push&&S.d.push.appId)||!u.osTT)return '';
+  if(u.osTT==='OK')return '<div class="meta" style="margin:4px 0">🛰 Máy chủ kiểm tra: ✅ thấy <b>'+u.osSo+'</b> máy đang nhận tin'+(u.osLuc?' · lúc '+tg(u.osLuc):'')+'</div>';
+  return '<div class="tag b-red" style="display:block;white-space:normal;margin:6px 0">⚠️ Máy chủ KHÔNG thấy điện thoại nào đang nhận tin của bạn'+(u.osLuc?' (kiểm '+tg(u.osLuc)+')':'')+'</div><div class="acts"><button class="btn ok" data-a="batLai">🔄 Bật lại thông báo</button></div>';
+}
 function bannerPush(){
   var t=ttPush();
+  if(osMat())return '<div id="pushBanner" class="card" style="border-color:var(--red);background:#fee2e2"><div><b>⚠️ Điện thoại này chưa nhận được nhắc việc</b></div><div class="meta" style="margin:4px 0 8px">Máy chủ không thấy máy nào của bạn đăng ký nhận thông báo. Bấm nút dưới để bật lại.</div><button class="btn ok sm" data-a="batLai">🔄 Bật lại thông báo</button></div>';
   if(!S.d||S.d.user.kenh==='NTFY'||!t.coAppId||t.bat)return '<div id="pushBanner"></div>'; // chưa kiểm tra xong thì chưa nhắc → không nháy khung vàng
   return '<div id="pushBanner" class="card" style="border-color:var(--amb);background:var(--amb2)"><div class="row sp"><span>🔔 <b>Chưa bật thông báo</b> – sẽ không nhận được nhắc việc</span><button class="btn ok sm" data-a="moPush">Bật ngay</button></div></div>';
 }
@@ -848,10 +864,12 @@ function veCD(){
     '<div class="card"><b>Máy của tôi – nhận thông báo qua</b>'+htmlKenh()+'</div>'+
     '<div class="meta" style="margin:4px">Tổ trưởng tự bật ở tab <b>Thông báo</b> trên điện thoại của mình. Kết quả từng lần gửi xem ở sheet <b>NhatKyGui</b> ("onesignal ok" là gửi thành công).</div>';
   } else if(S.cdTab==='tk'){
-    h+='<button class="btn ok" style="width:100%;margin-bottom:8px" data-a="suaUser" data-v="">➕ Thêm tài khoản</button>';
+    h+='<button class="btn ok" style="width:100%;margin-bottom:8px" data-a="suaUser" data-v="">➕ Thêm tài khoản</button>'+
+      '<button class="btn gh" style="width:100%;margin-bottom:8px" data-a="kiemTBTat">🛰 Kiểm tra máy nhận thông báo của mọi người</button>';
     c.users.forEach(function(u){
       h+='<div class="card"><div class="row sp"><div><b>'+esc(u.hoTen)+'</b> <span class="meta">@'+esc(u.tenDN)+'</span><div class="row" style="margin-top:3px"><span class="tag '+(u.vaiTro==='TBP'?'b-pur':'b-blu')+'">'+(u.vaiTro==='TBP'?'Trưởng bộ phận':'Tổ trưởng')+'</span><span class="tag">'+esc(u.khuVuc||'Tất cả')+'</span>'+(u.hoatDong?'':'<span class="tag b-red">Đã khóa</span>')+(u.nhanTB?'':'<span class="tag">Tắt thông báo</span>')+'</div></div></div>'+
-      '<div class="meta">🔔 Nhận qua: <b>'+({ONESIGNAL:'OneSignal',NTFY:'ntfy',CA_HAI:'OneSignal + ntfy'})[u.kenh||'ONESIGNAL']+'</b>'+(u.kenh&&u.kenh!=='ONESIGNAL'&&u.ntfy?' · mã ntfy: '+esc(u.ntfy):'')+'</div>'+(u.teams?'<div class="meta">Teams: có</div>':'')+(u.vaiTro==='TO_TRUONG'&&u.xemCua?'<div class="meta">👁 Được xem thêm: '+esc(/tất cả/i.test(u.xemCua)?'tất cả tổ trưởng':u.xemCua.split(/\s*,\s*/).map(tenUser).join(', '))+'</div>':'')+
+      '<div class="meta">🔔 Nhận qua: <b>'+({ONESIGNAL:'OneSignal',NTFY:'ntfy',CA_HAI:'OneSignal + ntfy'})[u.kenh||'ONESIGNAL']+'</b>'+(u.kenh&&u.kenh!=='ONESIGNAL'&&u.ntfy?' · mã ntfy: '+esc(u.ntfy):'')+'</div>'+
+      (u.kenh==='NTFY'?'':'<div class="meta">📱 Máy nhận OneSignal: '+(u.osTT==='OK'?'✅ '+u.osSo+' máy':u.osTT==='MAT'?'<b style="color:var(--red)">⚠️ không có máy nào</b>':'chưa kiểm tra')+(u.osLuc?' · kiểm '+tg(u.osLuc):'')+'</div>')+(u.teams?'<div class="meta">Teams: có</div>':'')+(u.vaiTro==='TO_TRUONG'&&u.xemCua?'<div class="meta">👁 Được xem thêm: '+esc(/tất cả/i.test(u.xemCua)?'tất cả tổ trưởng':u.xemCua.split(/\s*,\s*/).map(tenUser).join(', '))+'</div>':'')+
       '<div class="acts"><button class="btn gh sm" data-a="suaUser" data-v="'+esc(u.tenDN)+'">✏️ Sửa</button><button class="btn gh sm" data-a="hdUser" data-v="'+esc(u.tenDN)+'">🔗 Link vào nhanh</button><button class="btn gh sm" data-a="thuTB" data-v="'+esc(u.tenDN)+'">🔔 Gửi thử</button></div></div>';
     });
   } else if(S.cdTab==='ts'){
@@ -1040,6 +1058,16 @@ var A={
   xuatKhong:function(){dong();xuatExcel(false)},
   chiaSeFile:function(){var f=F.file;if(f&&navigator.share)navigator.share({files:[f],title:f.name}).catch(function(){})},
   xemNam:xemNam,
+  batLai:function(){
+    var t=ttPush();if(t.ios&&!t.app)return toast('Mở app MTCC từ màn hình chính (không mở bằng Safari) rồi bấm lại');
+    var os=PUSH.os;if(!os)return toast(PUSH.loi?'Chưa tải được OneSignal ('+PUSH.loi+') – kiểm tra mạng rồi mở lại app':'Đang tải bộ thông báo, thử lại sau vài giây');
+    spin(true);spinMsg('Đang bật lại thông báo…');
+    os.Notifications.requestPermission().then(function(){return os.User.PushSubscription.optIn()}).then(function(){return os.login(S.d.push.maNguoi)}).catch(function(){})
+    .then(function(){spinMsg('Đang nhờ máy chủ kiểm tra…');setTimeout(function(){kiemLaiOS(function(x){spin(false);kiemSub();veLaiPush();
+      if(!x)toast('Không kiểm tra được – thử lại sau');else if(x.tt==='OK')toast('✅ Máy chủ đã thấy '+x.so+' máy nhận tin');else toast('Vẫn chưa thấy máy – tắt hẳn app, mở lại rồi bấm lần nữa. Nếu không được, chọn nhận qua ntfy / Cả hai')})},3000)});
+  },
+  kiemTBTat:function(){call('kiemTB',{tat:1},function(r){var mat=r.ds.filter(function(x){return x.tt==='MAT'});
+    toast(mat.length?'⚠️ Chưa có máy nhận tin: '+mat.map(function(x){return x.hoTen}).join(', '):'✅ Tất cả tài khoản dùng OneSignal đều có máy nhận tin');taiCD(true)})},
   thuTB:function(d){call('thuThongBao',{tenDN:d.v},function(r){toast('Đã gửi: '+r.kq)})},
   copy:function(d){var t=d.v;try{navigator.clipboard.writeText(t).then(function(){toast('Đã sao chép')},function(){prompt('Sao chép mã:',t)})}catch(e){prompt('Sao chép mã:',t)}},
   doiMK:function(){call('password',{cu:val('f_m1'),moi:val('f_m2')},function(){if(LS.get('mtcc_p'))luuMK(LS.get('mtcc_u')||S.d.user.tenDN,val('f_m2'),true);toast('Đã đổi mật khẩu');$('f_m1').value='';$('f_m2').value=''})},
