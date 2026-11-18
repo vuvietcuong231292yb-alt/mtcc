@@ -88,7 +88,7 @@ label{font-size:13px;color:var(--mu)}
 .modal.on{display:flex}
 .sheet{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 22px}
 .sheet h4{margin:0 0 4px;font-size:17px}
-.pv{position:relative}.pv b{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:14px}
+.pv{position:relative}.pv i{position:absolute;left:4px;bottom:4px;font-style:normal;font-size:11px;font-weight:700;padding:1px 6px;border-radius:9px;background:rgba(0,0,0,.6);color:#fff}.pv i.xong{background:#15803d}.pv i.loi{background:#b91c1c}.pv b{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:14px}
 .pick{display:flex;cursor:pointer;align-items:center;justify-content:center;width:88px;height:88px;border:2px dashed var(--bd);border-radius:8px;color:var(--mu);font-size:30px;margin:0}
 table{width:100%;border-collapse:collapse;background:var(--card);font-size:13px}
 th,td{padding:7px 5px;border-bottom:1px solid var(--bd);text-align:center}th:first-child,td:first-child{text-align:left}
@@ -522,16 +522,17 @@ function veLaiPS(){var o={ten:val('f_ten'),moTa:val('f_mota'),nhacTruoc:val('f_n
 /* ================= FORM BÁO CÁO ================= */
 function timO(ma){return S.d.ds.filter(function(o){return o.ma===ma})[0]}
 function formHT(ma){
-  F={ma:ma,anh:[],nho:[]};var o=timO(ma);
+  var o=timO(ma);moJob('ht_'+ma,{khu:o.khuVuc,ten:o.ten},{ma:ma});
   moForm('<h4>📷 Báo hoàn thành</h4><div class="meta">'+esc(o.khuVuc)+' · '+esc(o.ten)+'</div><br>'+
   '<label>Ảnh sau khi làm xong * (1–'+S.d.cfg.soAnh+' ảnh) – 📷 chụp mới hoặc 🖼 chọn ảnh có sẵn</label><div class="imgs" id="f_anh"></div>'+
   '<label style="margin-top:10px;display:block">Ghi chú (không bắt buộc)</label><textarea id="f_gc" rows="2"></textarea>'+
   '<div class="acts"><button class="btn gh" data-a="dong">Hủy</button><button class="btn ok" data-a="guiHT">Gửi báo cáo</button></div>');
-  veAnh();
+  veAnh();khoiPhuc(F.j);
 }
+var NHAN_UP={cho:'⏳ chờ',dang:'⏳ đang tải',xong:'✓ đã lên',loi:'⚠ thử lại'};
 function veAnh(soMax){
-  var e=$('f_anh');if(!e)return;soMax=soMax||(S.d?S.d.cfg.soAnh:5);
-  e.innerHTML=F.anh.map(function(a,i){return '<div class="pv"><img src="'+a+'"><b data-a="xoaAnh" data-i="'+i+'">×</b></div>'}).join('')+
+  var e=$('f_anh');if(!e)return;soMax=soMax||F.soMax||(S.d?S.d.cfg.soAnh:5);F.soMax=soMax;
+  e.innerHTML=F.anh.map(function(a,i){return '<div class="pv"><img src="'+a.lon+'"><i id="up'+i+'" class="'+a.tt+'">'+NHAN_UP[a.tt]+'</i><b data-a="xoaAnh" data-i="'+i+'">×</b></div>'}).join('')+
   (F.anh.length<soMax?'<label class="pick" style="flex-direction:column;font-size:26px">📷<small style="font-size:11px">Chụp ảnh</small><input type="file" accept="image/*" capture="environment" style="display:none" id="f_cam"></label>'+
     '<label class="pick" style="flex-direction:column;font-size:26px">🖼<small style="font-size:11px">Ảnh có sẵn</small><input type="file" accept="image/*" multiple style="display:none" id="f_file"></label>':'');
   var c=$('f_cam');if(c)c.onchange=function(){themAnh(this,soMax,true)};
@@ -558,19 +559,19 @@ function gioChupExif(buf){
   }catch(err){}
   return '';
 }
-function nenAnh(file,nhan,cb,chupMoi){ // ảnh lớn ≤1024px (JPEG .7) + ảnh nhỏ 360px cho báo cáo; in giờ + nội dung ở cạnh dưới
+function nenAnh(file,nhan,cb,chupMoi){ // ảnh lớn ≤800px (JPEG .55, ~60-90KB) + ảnh nhỏ 280px cho báo cáo; in giờ + nội dung ở cạnh dưới
   var p=function(n){return (n<10?'0':'')+n},now=new Date(),bayGio=p(now.getDate())+'/'+p(now.getMonth()+1)+'/'+now.getFullYear()+' '+p(now.getHours())+':'+p(now.getMinutes());
   var docAnh=function(dongGio){
     var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){
-      var m=1024,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+      var m=800,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
       var g=c.getContext('2d');g.drawImage(im,0,0,c.width,c.height);
       var fs=Math.max(14,Math.round(c.width/38)),dong=[dongGio].concat(nhan||[]);
       var hb=dong.length*fs*1.35+fs*.6;g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,c.height-hb,c.width,hb);
       g.fillStyle='#fff';g.font='600 '+fs+'px -apple-system,Segoe UI,Roboto,Arial';g.textBaseline='top';
       dong.forEach(function(t,i){g.fillText(String(t).slice(0,70),fs*.6,c.height-hb+fs*.3+i*fs*1.35)});
-      var lon=c.toDataURL('image/jpeg',0.7),k2=Math.min(1,360/Math.max(c.width,c.height)),c2=document.createElement('canvas');
+      var lon=c.toDataURL('image/jpeg',0.55),k2=Math.min(1,280/Math.max(c.width,c.height)),c2=document.createElement('canvas');
       c2.width=Math.round(c.width*k2);c2.height=Math.round(c.height*k2);c2.getContext('2d').drawImage(c,0,0,c2.width,c2.height);
-      cb({lon:lon,nho:c2.toDataURL('image/jpeg',0.6)})};im.onerror=function(){cb(null)};im.src=fr.result};fr.readAsDataURL(file);
+      cb({lon:lon,nho:c2.toDataURL('image/jpeg',0.5)})};im.onerror=function(){cb(null)};im.src=fr.result};fr.readAsDataURL(file);
   };
   if(chupMoi){docAnh('Chụp lúc '+bayGio);return}
   var r=new FileReader();r.onload=function(){ // ảnh có sẵn: lấy giờ chụp gốc nếu có
@@ -581,11 +582,65 @@ function nenAnh(file,nhan,cb,chupMoi){ // ảnh lớn ≤1024px (JPEG .7) + ản
   };r.onerror=function(){docAnh('Ảnh có sẵn · tải lên lúc '+bayGio)};r.readAsArrayBuffer(file.slice(0,262144));
 }
 function themAnh(inp,soMax,chupMoi){
-  if(NV.info&&!NV.ten){inp.value='';toast('Chọn tên của bạn trước, để ảnh in đúng người chụp');return}
+  if((NV.info||NV.tam)&&!NV.ten){inp.value='';toast('Chọn tên của bạn trước, để ảnh in đúng người chụp');return}
   var o=F.ma&&S.d?timO(F.ma):null,nhan=F.nhanAnh||(o?[o.khuVuc+' · '+o.ten,S.d.user.hoTen]:[]);
   var fs=[].slice.call(inp.files,0,soMax-F.anh.length),n=fs.length;if(!n)return;spin(true);
-  fs.forEach(function(f){nenAnh(f,nhan,function(d){if(d){F.anh.push(d.lon);F.nho.push(d.nho)}if(--n===0){spin(false);veAnh(soMax)}},chupMoi)});
+  var J=F.j;fs.forEach(function(f){nenAnh(f,nhan,function(d){if(d&&J)J.anh.push({lon:d.lon,nho:d.nho,tt:'cho'});if(--n===0){spin(false);if(F.j===J)veAnh(soMax);luuJob(J);bom(J)}},chupMoi)});
 }
+/* ===== v5e: ảnh tự tải lên NGAY KHI CHỤP; bấm Gửi chỉ chờ máy chủ xác nhận. Ảnh được giữ trong máy cho tới khi máy chủ báo đã lưu ===== */
+var KHO={db:null,mo:function(cb){if(KHO.db)return cb(KHO.db);try{var r=indexedDB.open('mtcc_anh',1);r.onupgradeneeded=function(){r.result.createObjectStore('job')};r.onsuccess=function(){KHO.db=r.result;cb(KHO.db)};r.onerror=function(){cb(null)}}catch(e){cb(null)}},
+  st:function(db,m){return db.transaction('job',m||'readonly').objectStore('job')},
+  dat:function(k,v){KHO.mo(function(db){if(db)try{KHO.st(db,'readwrite').put(v,k)}catch(e){}})},
+  xoa:function(k){KHO.mo(function(db){if(db)try{KHO.st(db,'readwrite').delete(k)}catch(e){}})},
+  lay:function(k,cb){KHO.mo(function(db){if(!db)return cb(null);try{var q=KHO.st(db).get(k);q.onsuccess=function(){cb(q.result||null)};q.onerror=function(){cb(null)}}catch(e){cb(null)}})},
+  tatCa:function(cb){KHO.mo(function(db){if(!db)return cb([]);try{var q=KHO.st(db).getAll();q.onsuccess=function(){cb(q.result||[])};q.onerror=function(){cb([])}}catch(e){cb([])}})}};
+var JOBS={};
+function moJob(khoa,ngu,them){var J=JOBS[khoa]||{khoa:khoa,ngu:ngu,anh:[],chay:0};J.ngu=ngu;F={j:J,anh:J.anh,khoa:khoa};for(var k in them)F[k]=them[k];JOBS[khoa]=J;return J}
+function luuJob(J){if(!J)return;if(!J.anh.length&&!J.daBam){KHO.xoa(J.khoa);return}
+  KHO.dat(J.khoa,{khoa:J.khoa,ngu:J.ngu,ma:J.ma||'',tok:J.ngu.tok||'',ten:J.ten||'',ghiChu:J.ghiChu||'',daBam:!!J.daBam,luc:Date.now(),anh:J.anh.map(function(a){return {lon:a.lon,nho:a.nho,id:a.id||'',nhoId:a.nhoId||''}})})}
+function napJob(J,d){if(!d||!d.anh||!d.anh.length||J.anh.length)return false;d.anh.forEach(function(a){J.anh.push({lon:a.lon,nho:a.nho,id:a.id,nhoId:a.nhoId,tt:a.id?'xong':'cho'})});J.ten=d.ten;J.ghiChu=d.ghiChu;J.daBam=d.daBam;J.ma=d.ma;return true}
+function khoiPhuc(J){KHO.lay(J.khoa,function(d){if(!napJob(J,d))return;if(F.j===J){veAnh();var g=$('f_gc');if(g&&J.ghiChu)g.value=J.ghiChu}toast('Đã khôi phục '+J.anh.length+' ảnh chưa gửi');bom(J);if(J.daBam&&F.j===J)guiJob(J)})}
+function capTT(J,i){if(F.j!==J)return;var e=$('up'+i);if(e){var a=J.anh[i];e.className=a.tt;e.textContent=NHAN_UP[a.tt]}}
+function bom(J){
+  J.anh.forEach(function(a,i){
+    if(a.tt!=='cho'||J.chay>=2)return;J.chay++;a.tt='dang';capTT(J,i);
+    var p={tok:J.ngu.tok||'',khu:J.ngu.khu,ten:J.ngu.ten,lon:a.lon,nho:a.nho,stt:i+1};
+    google.script.run.withSuccessHandler(function(r){J.chay--;
+      if(r&&r.ok){a.id=r.id;a.nhoId=r.nho;a.tt='xong';a.err=''}
+      else if(r&&r.err==='HET_PHIEN'){a.tt='cho';hetPhien(function(){bom(J)});return}
+      else{a.tt='loi';a.err=(r&&r.err)||'Lỗi máy chủ';a.dung=r&&r.dung;if(!a.dung)setTimeout(function(){if(a.tt==='loi'){a.tt='cho';bom(J)}},4000)}
+      sauTai(J)})
+    .withFailureHandler(function(){J.chay--;a.tt='loi';a.err='Mất sóng – tự thử lại';sauTai(J);setTimeout(function(){if(a.tt==='loi'){a.tt='cho';bom(J)}},4000)})
+    .api('taiAnh',S.token,p);
+  });
+}
+function sauTai(J){J.anh.forEach(function(a,i){capTT(J,i)});luuJob(J);bom(J);if(J.daBam)chot(J)}
+/** Bấm Gửi: đợi đủ ảnh lên máy chủ rồi ghi báo cáo. Chỉ báo ✅ khi máy chủ đã lưu xong */
+function guiJob(J){J.daBam=true;luuJob(J);bom(J);chot(J)}
+function chot(J){
+  if(!J.daBam||J.dangChot)return;
+  var xong=J.anh.filter(function(a){return a.tt==='xong'}).length,hu=J.anh.filter(function(a){return a.tt==='loi'&&a.dung})[0];
+  if(hu){J.daBam=false;luuJob(J);if(F.j===J){spin(false);toast(hu.err)}return}
+  if(F.j===J||J.hien){spin(true);spinMsg('Đang gửi ảnh '+xong+'/'+J.anh.length+'… Đừng tắt app cho tới khi hiện ✅')}
+  if(xong<J.anh.length)return;
+  J.dangChot=true;if(F.j===J||J.hien)spinMsg('Đang lưu báo cáo… Đừng tắt app');
+  var ids=J.anh.map(function(a){return a.id}),nho=J.anh.map(function(a){return a.nhoId||a.id});
+  var a=J.ngu.tok?'nvGui':'tacVu',p=J.ngu.tok?{tok:J.ngu.tok,ten:J.ten,ids:ids,idsNho:nho,ghiChu:J.ghiChu}:{ma:J.ma,loai:'HOAN_THANH',ids:ids,idsNho:nho,ghiChu:J.ghiChu,_data:1};
+  google.script.run.withSuccessHandler(function(r){J.dangChot=false;
+    if(r&&r.ok){J.daBam=false;KHO.xoa(J.khoa);delete JOBS[J.khoa];spin(false);J.xong&&J.xong(r);return}
+    if(r&&r.err==='HET_PHIEN'){hetPhien(function(){chot(J)});return}
+    J.daBam=false;luuJob(J);spin(false);toast((r&&r.err)||'Lỗi máy chủ – bấm Gửi lại')})
+  .withFailureHandler(function(){J.dangChot=false;if(F.j===J||J.hien)spinMsg('Mất sóng – đang thử lại… Đừng tắt app');setTimeout(function(){chot(J)},4000)})
+  .api(a,S.token,p);
+}
+function xongHT(J){return function(r){if(r.data)nhanDuLieu(r.data);else taiLai(null,true);if(F.j===J)dong();toast('✅ Đã lưu báo cáo hoàn thành ('+J.anh.length+' ảnh)')}}
+/** Mở lại app: báo cáo nào đã bấm Gửi mà chưa xong (mất sóng, tắt app) thì tự gửi tiếp */
+function tiepTucNen(){if(tiepTucNen.da)return;tiepTucNen.da=1;KHO.tatCa(function(ds){ds.forEach(function(d){
+  if(!d||!d.daBam||d.khoa.indexOf('ht_')!==0||JOBS[d.khoa])return;var o=S.d&&timO(d.ma);
+  var J={khoa:d.khoa,ngu:d.ngu,anh:[],chay:0};napJob(J,d);JOBS[d.khoa]=J;J.xong=xongHT(J);
+  toast('Đang gửi tiếp báo cáo lần trước'+(o?': '+o.ten:'')+'…');bom(J);chot(J)})})}
+window.addEventListener('beforeunload',function(e){for(var k in JOBS){var J=JOBS[k];if(J.daBam||J.anh.some(function(a){return a.tt!=='xong'})){e.preventDefault();e.returnValue='Ảnh chưa gửi xong';return 'Ảnh chưa gửi xong'}}});
+document.addEventListener('visibilitychange',function(){if(document.hidden)return;for(var k in JOBS){var J=JOBS[k];J.anh.forEach(function(a){if(a.tt==='loi'&&!a.dung)a.tt='cho'});bom(J);chot(J)}});
 function formLyDo(tieuDe,ma,nut,coNgay,batBuoc){
   var o=ma?timO(ma):null;
   moForm('<h4>'+tieuDe+'</h4>'+(o?'<div class="meta">'+esc(o.khuVuc)+' · '+esc(o.ten)+' · hạn '+nn(o.hanHienTai)+'</div><br>':'')+
@@ -936,9 +991,8 @@ var A={
   guiChuyen:function(d){ghi('tacVu',{ma:d.ma,loai:'CHUYEN',ngay:val('f_ngay'),lyDo:val('f_ly')},{chan:true,sau:function(){dong()},msg:'Đã gửi đề xuất, chờ TBP duyệt'})},
   guiHuy:function(d){ghi('tacVu',{ma:d.ma,loai:'HUY',lyDo:val('f_ly')},{chan:true,sau:function(){dong()},msg:'Đã gửi đề xuất hủy, chờ TBP duyệt'})},
   ht:function(d){dong();formHT(d.ma)},
-  xoaAnh:function(d){F.anh.splice(+d.i,1);F.nho.splice(+d.i,1);veAnh()},
-  guiHT:function(){if(!F.anh.length)return toast('Cần chụp ít nhất 1 ảnh');spinMsg('Đang gửi '+F.anh.length+' ảnh…');
-    ghi('tacVu',{ma:F.ma,loai:'HOAN_THANH',anh:F.anh,anhNho:F.nho,ghiChu:val('f_gc')},{chan:true,sau:function(){dong()},msg:'Đã gửi báo cáo hoàn thành'})},
+  xoaAnh:function(d){F.anh.splice(+d.i,1);veAnh();luuJob(F.j)},
+  guiHT:function(){if(!F.anh.length)return toast('Cần chụp ít nhất 1 ảnh');var J=F.j;J.ma=F.ma;J.ghiChu=val('f_gc');J.xong=xongHT(J);guiJob(J)},
   dongy:function(d){var o=timO(d.ma);hoi('Đồng ý '+(o.deXuat==='HUY'?'hủy':'đổi hạn sang '+nn(o.deXuatNgay))+' cho "'+o.ten+'"?',function(){
     ghi('duyet',{ma:d.ma,kq:'DONG_Y'},{lac:function(x){if(x.deXuat==='HUY'){x.tt='HUY';x.mo=false}else{x.hanHienTai=x.deXuatNgay;x.tt=x.trangThaiGoc==='DA_NHAN'?'DA_NHAN':'CHO_NHAN'}x.deXuatKQ='DONG_Y'},msgTruoc:'Đã duyệt'})})},
   tuchoi:function(d){formLyDo('✖ Từ chối đề xuất',d.ma,'guiTuChoi')},
@@ -1026,6 +1080,7 @@ document.addEventListener('click',function(e){
 
 /* ================= KHỞI ĐỘNG ================= */
 function moTuLink(){
+  setTimeout(tiepTucNen,800);
   var b=(typeof BOOT==='object'&&BOOT)||{};
   var tabMap={duyet:'xl',xong:'viec',ps:'viec'};if(b.tab)b.tab=tabMap[b.tab]||b.tab;
   if(b.tab&&dsTab().some(function(t){return t[0]===b.tab})){S.tab=b.tab;ve()}
@@ -1042,28 +1097,44 @@ function moTuLink(){
 var NV={info:null,ten:''};
 function taiTuy(){var f=S.f;if(!f.tu||!f.den)return;call('dsViec',{tu:f.tu,den:f.den},function(r){S.dsTuy=r;if(S.tab==='viec')ve()},'nen')}
 function moTrangNV(tok){
-  $('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="empty">Đang tải…</div></main>';
-  F={anh:[],nho:[]};
-  call('nvXem',{tok:tok},function(r){NV.info=r;NV.tok=tok;veNV()},false,function(r){$('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="card"><b>'+esc(r&&r.err||'Không mở được link')+'</b></div></main>'});
+  NV.tok=tok;NV.info=null;var q=new URLSearchParams(location.search),kv=q.get('kv')||'',vc=q.get('vc')||'';
+  NV.ten=NV.ten||LS.get('mtcc_nvten')||'';
+  var J=moJob('nv_'+tok,{tok:tok,khu:kv,ten:vc},{});J.xong=xongNV(J);
+  var ds=[];try{ds=JSON.parse(LS.get('mtcc_nvds_'+kv)||'[]')}catch(e){}
+  if(vc){NV.tam={khuVuc:kv,ten:vc,nhanVien:ds,soAnh:+LS.get('mtcc_nvso')||5,han:'',today:'',phuTrach:''};veNV()} // hiện ngay từ link, không chờ máy chủ
+  else $('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="empty">Đang tải…</div></main>';
+  KHO.lay(J.khoa,function(d){if(!napJob(J,d))return;NV.ten=J.ten||NV.ten;if($('f_anh'))veAnh();if(J.daBam){J.hien=1;toast('Đang gửi tiếp ảnh lần trước…');bom(J);chot(J)}else{toast('Đã khôi phục '+J.anh.length+' ảnh chưa gửi');bom(J)}});
+  call('nvXem',{tok:tok},function(r){NV.info=r;NV.tam=null;J.ngu.khu=r.khuVuc;J.ngu.ten=r.ten;LS.set('mtcc_nvds_'+r.khuVuc,JSON.stringify(r.nhanVien||[]));LS.set('mtcc_nvso',r.soAnh);
+      if(NV.ten&&r.nhanVien.indexOf(NV.ten)<0)NV.khac=true;if($('f_anh'))veNVDau();else veNV()},'nen',
+    function(r){if(J.daBam)return;$('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="card"><b>'+esc(r&&r.err||'Không mở được link – kiểm tra mạng rồi mở lại link')+'</b></div></main>'});
 }
-function veNV(){
-  var r=NV.info,n=diff(r.han,r.today);F.nhanAnh=[r.khuVuc+' · '+r.ten,NV.ten||''];
-  var h='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="card"><div class="meta">'+esc(r.khuVuc)+(r.phuTrach?' · Tổ trưởng: '+esc(r.phuTrach):'')+'</div><div class="ttl">'+esc(r.ten)+'</div>'+
-    '<span class="han '+(n<0?'r':n<=1?'a':'b')+'">'+(n<0?'Đã quá hạn '+(-n)+' ngày':n===0?'Hạn hôm nay':'Hạn '+nn(r.han))+'</span>'+(r.viTri?'<div class="meta">📍 '+esc(r.viTri)+'</div>':'')+(r.moTa?'<div class="meta">📝 '+esc(r.moTa)+'</div>':'')+'</div>';
+function nvR(){return NV.info||NV.tam}
+function htmlNVDau(){
+  var r=nvR(),n=r.han?diff(r.han,r.today):null;
+  var h='<div class="card"><div class="meta">'+esc(r.khuVuc)+(r.phuTrach?' · Tổ trưởng: '+esc(r.phuTrach):'')+'</div><div class="ttl">'+esc(r.ten)+'</div>'+
+    (n===null?'<span class="meta">⟳ đang tải hạn…</span>':'<span class="han '+(n<0?'r':n<=1?'a':'b')+'">'+(n<0?'Đã quá hạn '+(-n)+' ngày':n===0?'Hạn hôm nay':'Hạn '+nn(r.han))+'</span>')+(r.viTri?'<div class="meta">📍 '+esc(r.viTri)+'</div>':'')+(r.moTa?'<div class="meta">📝 '+esc(r.moTa)+'</div>':'')+'</div>';
   if(r.daGui)h+='<div class="nvbox">Đã có <b>'+r.daGui.so+'</b> ảnh của '+esc(r.daGui.ten)+' gửi lúc '+tg(r.daGui.luc)+' – đang chờ tổ trưởng xác nhận. Có thể gửi thêm nếu cần.</div>';
-  h+='<div class="card"><label>Tên của bạn *</label><div class="chips wrap">'+r.nhanVien.map(function(t){return '<button class="chip '+(NV.ten===t?'on':'')+'" data-a="nvTen" data-v="'+esc(t)+'">'+esc(t)+'</button>'}).join('')+'<button class="chip '+(NV.khac?'on':'')+'" data-a="nvTen" data-v="">Tên khác…</button></div>'+
-    (NV.khac||!r.nhanVien.length?'<input id="f_nvten" placeholder="Nhập họ tên" value="'+esc(NV.khac?NV.ten:'')+'">':'')+
-    '<label>Ảnh sau khi làm xong * – 📷 chụp mới hoặc 🖼 chọn ảnh có sẵn (ảnh tự in giờ)</label><div class="imgs" id="f_anh"></div>'+
+  return h;
+}
+function htmlNVTen(){var r=nvR();return '<div class="chips wrap">'+r.nhanVien.map(function(t){return '<button class="chip '+(NV.ten===t&&!NV.khac?'on':'')+'" data-a="nvTen" data-v="'+esc(t)+'">'+esc(t)+'</button>'}).join('')+'<button class="chip '+(NV.khac?'on':'')+'" data-a="nvTen" data-v="">Tên khác…</button></div>'+
+    (NV.khac||!r.nhanVien.length?'<input id="f_nvten" placeholder="Nhập họ tên" value="'+esc(NV.ten)+'">':'')}
+function ganTen(){var r=nvR();F.nhanAnh=[r.khuVuc+' · '+r.ten,NV.ten||''];var ip=$('f_nvten');if(ip)ip.oninput=function(){NV.ten=this.value.trim();LS.set('mtcc_nvten',NV.ten);F.nhanAnh=[r.khuVuc+' · '+r.ten,NV.ten]}}
+function veNVDau(){var e=$('nvDau');if(e)e.innerHTML=htmlNVDau();var t=$('nvTen');if(t&&!(document.activeElement&&document.activeElement.id==='f_nvten'))t.innerHTML=htmlNVTen();if($('f_anh')&&nvR().soAnh!==F.soMax)veAnh(nvR().soAnh);ganTen()}
+function veNV(){
+  var r=nvR();
+  $('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div id="nvDau">'+htmlNVDau()+'</div>'+
+    '<div class="card"><label>Tên của bạn *</label><div id="nvTen">'+htmlNVTen()+'</div>'+
+    '<label>Ảnh sau khi làm xong * – 📷 chụp mới hoặc 🖼 chọn ảnh có sẵn (ảnh tự in giờ, tự tải lên ngay)</label><div class="imgs" id="f_anh"></div>'+
     '<label style="display:block;margin-top:10px">Ghi chú (không bắt buộc)</label><textarea id="f_gc" rows="2"></textarea>'+
     '<button class="btn ok" style="width:100%;margin-top:6px" data-a="nvGui">📤 Gửi ảnh</button></div></main>';
-  $('app').innerHTML=h;veAnh(r.soAnh);
-  var ip=$('f_nvten');if(ip)ip.oninput=function(){NV.ten=this.value.trim();F.nhanAnh=[r.khuVuc+' · '+r.ten,NV.ten]};
+  veAnh(r.soAnh);ganTen();var J=F.j;if(J&&J.ghiChu)$('f_gc').value=J.ghiChu;
 }
-A.nvTen=function(d){var ip=$('f_nvten');if(d.v){NV.ten=d.v;NV.khac=false}else{NV.khac=true;NV.ten=ip?ip.value.trim():''}var a=F.anh,nh=F.nho;veNV();F.anh=a;F.nho=nh;veAnh(NV.info.soAnh)};
-A.nvGui=function(){var ip=$('f_nvten');if(ip)NV.ten=ip.value.trim();if(!NV.ten)return toast('Chọn hoặc nhập tên của bạn');if(!F.anh.length)return toast('Chụp hoặc chọn ít nhất 1 ảnh');
-  spinMsg('Đang gửi '+F.anh.length+' ảnh…');
-  call('nvGui',{tok:NV.tok,ten:NV.ten,anh:F.anh,anhNho:F.nho,ghiChu:val('f_gc')},function(r){F.anh=[];F.nho=[];
-    $('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:48px">✅</div><b>Đã gửi lúc '+tg(r.luc)+'</b><div class="meta" style="margin:8px 0 16px">Tổ trưởng sẽ kiểm tra và xác nhận. Cảm ơn bạn!</div><button class="btn gh" data-a="nvLai">Gửi thêm ảnh</button></div></main>'})};
+function xongNV(J){return function(r){var n=J.anh.length;J.anh.length=0;
+  $('app').innerHTML='<header><b>📷 Gửi ảnh hoàn thành</b></header><main><div class="card" style="text-align:center;padding:30px 16px"><div style="font-size:48px">✅</div><b>Đã lưu '+n+' ảnh lúc '+tg(r.luc)+'</b><div class="meta" style="margin:8px 0 16px">Máy chủ đã nhận đủ ảnh. Bây giờ có thể tắt app.<br>Tổ trưởng sẽ kiểm tra và xác nhận. Cảm ơn bạn!</div><button class="btn gh" data-a="nvLai">Gửi thêm ảnh</button></div></main>'}}
+A.nvTen=function(d){var ip=$('f_nvten');if(d.v){NV.ten=d.v;NV.khac=false}else{NV.khac=true;NV.ten=ip?ip.value.trim():''}LS.set('mtcc_nvten',NV.ten);$('nvTen').innerHTML=htmlNVTen();ganTen();var i2=$('f_nvten');if(i2&&!d.v)i2.focus()};
+A.nvGui=function(){var ip=$('f_nvten');if(ip){NV.ten=ip.value.trim();LS.set('mtcc_nvten',NV.ten)}if(!NV.ten)return toast('Chọn hoặc nhập tên của bạn');if(!F.anh.length)return toast('Chụp hoặc chọn ít nhất 1 ảnh');
+  if(!NV.info)return toast('Đang tải thông tin việc, thử lại sau vài giây');
+  var J=F.j;J.ten=NV.ten;J.ghiChu=val('f_gc');J.hien=1;guiJob(J)};
 A.nvLai=function(){moTrangNV(NV.tok)};
 
 /* tự cập nhật khi mở lại app từ nền */
